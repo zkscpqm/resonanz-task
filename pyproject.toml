@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "resonanz-task"
+version = "0.1.0"
+description = ""
+authors = ["Georgi <zkscpqm@daum.net>"]
+readme = "README.md"
+packages = [{include = "resonanz_task"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+flask = "^3.0.0"
+waitress = "^2.1.2"
+geopy = "^2.4.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
