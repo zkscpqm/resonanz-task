@@ -6,15 +6,16 @@
 
  - [x] Set up Flask
  - [ ] Set up database
- - [ ] Normalize addresses and choose best backend
+ - [x] Set up Logging
+ - [x] Normalize addresses and choose best backend
    - [x] Get basic functionality with Nominatim
-   - [ ] Get basic functionality with Google Maps API
+   - [x] Get basic functionality with Google Maps API
  - [ ] Implement address matching
  - [ ] Implement loading CSVs
 
 #### Frontend
 
- - [x] Set up basic HTMX, bootstrap
+ - [x] Set up basic ~~HTMX~~ jQuery, bootstrap
  - [ ] Set up basic map/locator
  - Views:
    - [ ] Home/Search
