@@ -39,12 +39,12 @@ class DatabaseConfig:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> 'DatabaseConfig':
         return cls(
-            db_type=data.get("db_type"),
+            db_type=data.get("type"),
             username=data.get("username"),
             password=data.get("password"),
             host=data.get("host"),
             port=data.get("port"),
-            db_name=data.get("db_name"),
+            db_name=data.get("name"),
         )
 
 

@@ -3,5 +3,9 @@
   "debug_mode": true,
   "log_level": "debug",
   "address_parser_backend": "googlemaps",
-  "address_parser_api_key": "GOOGLE MAPS API KEY HERE IF USING GM API"
+  "address_parser_api_key": "GOOGLE MAPS API KEY HERE IF USING GM API",
+  "database": {
+    "type": "sqlite",
+    "name": "resonanz"
+  }
 }

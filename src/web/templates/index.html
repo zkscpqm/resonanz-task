@@ -41,17 +41,13 @@
                 contentType: 'application/json',
                 data: JSON.stringify({ address: address }),
                 success: function(response) {
-                    if (!response.parsing_ok) {
-                        newToast("Address was used as is without normalization.", "#ffe138"); // Yellow for warning
-                    } else {
-                        newToast("Address normalized successfully.", "#5cb85c"); // Green for success
-                    }
+                    newToast("Address added.", "#5cb85c");
                     // Update the result div
                     $('#result').html(JSON.stringify(response));
                 },
                 error: function(xhr, status, error) {
                     var errorMessage = xhr.status + ': ' + xhr.statusText;
-                    newToast("Error - " + errorMessage, "#dc3545"); // Red for error
+                    newToast("Error - " + errorMessage, "#dc3545");
                 }
             });
         });

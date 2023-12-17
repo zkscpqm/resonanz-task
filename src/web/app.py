@@ -1,9 +1,11 @@
 import json
 from http import HTTPStatus
-from typing import Callable
+from typing import Callable, Any
 
 from flask import Flask, render_template, request, Response, jsonify
 
+from src.db.conn import Database
+from src.db.model import Address
 from src.geo.normalization import AddressParser, new_parser
 from src.util.logging import Logger
 from src.util.meta import SingletonMeta
@@ -11,7 +13,7 @@ from src.util.meta import SingletonMeta
 
 class Application(metaclass=SingletonMeta):
 
-    def __init__(self, logger: Logger, port: int = 0,
+    def __init__(self, logger: Logger, db: Database, port: int = 0,
                  parser_engine: str = AddressParser.GOOGLE_MAPS, parser_api_key: str = None
                  ):
         """
@@ -21,6 +23,7 @@ class Application(metaclass=SingletonMeta):
         """
         self._app: Flask = Flask(__name__)
         self._port: int = port
+        self._db: Database = db
         self._address_parser: AddressParser = new_parser(
             parser_engine, logger=logger.new_from("ADDRESS_PARSER"), api_key=parser_api_key
         )
@@ -49,14 +52,13 @@ class Application(metaclass=SingletonMeta):
             return self._err_json_response(HTTPStatus.BAD_REQUEST, "No address specified")
 
         self._logger.debug(f"Got request to normalize address: `{raw_address}`")
-        parse_ok = True
         if not (address := self._address_parser.normalize(raw_address)):
-            self._logger.warning(f"Could not normalize address: `{address}` so using it as is")
-            parse_ok = False
-            address = raw_address
+            self._logger.error(f"Could not normalize address: `{address}`")
+            return self._err_json_response(HTTPStatus.BAD_REQUEST, f"Could not normalize address: `{address}`")
         else:
             self._logger.info(f"Normalized address `{raw_address}` to `{address}`")
-        return jsonify({"address": address, "parsing_ok": parse_ok}), HTTPStatus.CREATED
+        addr_as_dict = self._db.insert_address(address)
+        return jsonify({"address": addr_as_dict}), HTTPStatus.CREATED
 
     def index(self) -> Response:
         return Response(render_template("index.html"))
