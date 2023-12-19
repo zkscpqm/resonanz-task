@@ -2,12 +2,13 @@ import contextlib
 from typing import Any
 
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker as SessionFactory, Session
+from sqlalchemy.orm import sessionmaker as SessionFactory, relationship
 from sqlalchemy.engine.base import Engine
 
 from config import DatabaseConfig
 from src.db.base import Base
-from src.db.model import Address
+from src.db.model import Address, Tenant
+from src.db.session import Session
 from src.util.logging import Logger
 
 
@@ -46,52 +47,42 @@ class Database:
     def create_tables(self):
         Base.metadata.create_all(self.engine)
 
+        # This has to be done here because the relationship must be defined in both models
+        # Since one model must always be written above the other, this is the only place where it can be done
+        Address.tenants = relationship('Tenant', order_by=Tenant.id, back_populates='address')
+
     @contextlib.contextmanager
     def in_session(self) -> Session:
-        session = self._session_factory()
+        raw_session = self._session_factory()
+        sess = Session(raw_session, self._logger.new_from("Session"))
         try:
-            yield session
-            session.commit()
+            yield sess
+            self._logger.debug("Committing...")
+            raw_session.commit()
         except Exception as e:
-            self._logger.error(f"Exception in session: {e}")
-            session.rollback()
+            self._logger.debug(f"Exception in session: {e}, rolling back...")
+            raw_session.rollback()
             raise
         finally:
-            session.close()
+            raw_session.close()
 
-    def insert_address(self, address: Address) -> dict[str, Any]:
-        self._logger.debug(f"Inserting address\n{address}")
+    def new_tenant(self, address: Address, tenant_name: str) -> dict[str, Any]:
         try:
             with self.in_session() as session:
-                addr_d = address.to_dict()
 
-                if self._address_exists_session(session, address):
-                    self._logger.debug(f"Address already exists\n{address}")
-                    return addr_d
+                if not (
+                        addr_data := session.insert_address(address)
+                ) or not (
+                        addr_id := addr_data.get('id')
+                ):
+                    self._logger.error(f"Could not insert address into database\n{address}")
+                    return {}
+                tenant = Tenant(name=tenant_name, address_id=addr_id)
+                if not (tenant_data := session.insert_tenant(tenant)):
+                    self._logger.error(f"Could not insert tenant into database\n{tenant}")
+                    return {}
+                return tenant_data | {"address": addr_data}
 
-                session.add(address)
-                self._logger.debug(f"Inserted address\n{address}")
-                return addr_d
         except Exception as e:
-            self._logger.error(f"Could not insert address\n{address}\nError: `{e}`")
+            self._logger.error(f"Could not insert new entry for tenant {tenant_name}\n{address}\nError: `{e}`")
             return {}
-
-    def _address_exists(self, address: Address) -> bool:
-        with self.in_session() as session:
-            return self._address_exists_session(session, address)
-
-    def _address_exists_session(self, session: Session, address: Address) -> bool:
-        query = session.query(Address).filter(
-            (Address.street_number == address.street_number) if address.street_number is not None else True,
-            (Address.street_name == address.street_name) if address.street_name is not None else True,
-            (Address.neighborhood == address.neighborhood) if address.neighborhood is not None else True,
-            (Address.city == address.city) if address.city is not None else True,
-            (Address.region == address.region) if address.region is not None else True,
-            (Address.postcode == address.postcode) if address.postcode is not None else True,
-            (Address.country == address.country) if address.country is not None else True,
-            (Address.block == address.block) if address.block is not None else True,
-            (Address.entrance == address.entrance) if address.entrance is not None else True,
-            (Address.floor == address.floor) if address.floor is not None else True,
-            (Address.apartment_number == address.apartment_number) if address.apartment_number is not None else True
-        )
-        return session.query(query.exists()).scalar()

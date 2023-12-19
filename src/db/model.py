@@ -1,5 +1,6 @@
 from typing import Optional, Any
-from sqlalchemy import Column, Integer, String, UniqueConstraint
+from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey
+from sqlalchemy.orm import relationship, Session
 
 from src.db.base import Base
 
@@ -45,7 +46,7 @@ class Address(Base):
         )
 
     def to_dict(self) -> dict:
-        # Convert the address object to a dictionary for JSON encoding
+
         return {
             'street_number': self.street_number,
             'street_name': self.street_name,
@@ -61,18 +62,17 @@ class Address(Base):
         }
 
 
-# Example usage
-# config = DatabaseConfig(db_type='sqlite', database='local')
-# db = Database(config)
-# db.create_tables()
+class Tenant(Base):
+    __tablename__ = 'tenants'
 
-# Example usage for PostgreSQL
-# config = DatabaseConfig(db_type='postgres', username='user', password='pass', host='localhost', port='5432', database='mydb')
-# db = Database(config)
-# db.create_tables()
+    id: int = Column(Integer, primary_key=True)
+    name: str = Column(String, nullable=False)
+    address_id: int = Column(Integer, ForeignKey('addresses.id'), nullable=False)
+    address = relationship('Address', back_populates='tenants')
 
-# Assuming you have a valid geocode result from Google Maps API
-# address = Address.from_google_maps_result(geocode_result)
-# session = db.Session()
-# session.add(address)
-# session.commit()
+    def to_dict(self) -> dict:
+        return {
+            'id': self.id,
+            'name': self.name,
+            'address_id': self.address_id
+        }

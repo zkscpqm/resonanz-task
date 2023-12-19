@@ -20,6 +20,12 @@
 
 <div class="container">
     <h2 class="mb-4">Enter Address</h2>
+    <form id="nameForm" class="mb-3">
+        <div class="mb-3">
+            <input type="text" class="form-control" id="nameInput" placeholder="Enter name" required />
+        </div>
+    </form>
+    <h2 class="mb-4">Enter Address</h2>
     <form id="addressForm" class="mb-3">
         <div class="mb-3">
             <input type="text" class="form-control" id="addressInput" placeholder="Enter address" required />
@@ -33,15 +39,16 @@
 <script>
     $(document).ready(function() {
         $('#submitBtn').click(function() {
-            var address = $('#addressInput').val();
+            let address = $('#addressInput').val();
+            let name    = $('#nameInput').val();
 
             $.ajax({
-                url: '/_address',
+                url: '/_tenant',
                 type: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify({ address: address }),
+                data: JSON.stringify({ address: address, name: name }),
                 success: function(response) {
-                    newToast("Address added.", "#5cb85c");
+                    newToast("Tenant added.", "#5cb85c");
                     // Update the result div
                     $('#result').html(JSON.stringify(response));
                 },

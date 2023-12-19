@@ -5,7 +5,7 @@ from typing import Callable, Any
 from flask import Flask, render_template, request, Response, jsonify
 
 from src.db.conn import Database
-from src.db.model import Address
+from src.db.model import Address, Tenant
 from src.geo.normalization import AddressParser, new_parser
 from src.util.logging import Logger
 from src.util.meta import SingletonMeta
@@ -43,22 +43,31 @@ class Application(metaclass=SingletonMeta):
         self._logger.info(f"Running in production mode (waitress) on {port=}")
         waitress.serve(self._app, host="0.0.0.0", port=port)
 
-    def _add_address(self):
-        if request.method.upper() != "POST":
-            self._logger.error(f"Got request with method {request.method} instead of POST")
-            return self._err_json_response(HTTPStatus.METHOD_NOT_ALLOWED, "FATAL: Only POST is allowed")
-        raw_address = request.get_json().get("address")
+    def _parse_address(self, raw_address: str) -> Address | None:
         if not raw_address:
-            return self._err_json_response(HTTPStatus.BAD_REQUEST, "No address specified")
+            raise ValueError("No address specified")
 
         self._logger.debug(f"Got request to normalize address: `{raw_address}`")
         if not (address := self._address_parser.normalize(raw_address)):
-            self._logger.error(f"Could not normalize address: `{address}`")
-            return self._err_json_response(HTTPStatus.BAD_REQUEST, f"Could not normalize address: `{address}`")
-        else:
-            self._logger.info(f"Normalized address `{raw_address}` to `{address}`")
-        addr_as_dict = self._db.insert_address(address)
-        return jsonify({"address": addr_as_dict}), HTTPStatus.CREATED
+            raise ValueError(f"Could not normalize address: `{address}`")
+        return address
+
+    def _add_entry(self):
+        if request.method.upper() != "POST":
+            self._logger.error(f"Got request with method {request.method} instead of POST")
+            return self._err_json_response(HTTPStatus.METHOD_NOT_ALLOWED, "FATAL: Only POST is allowed")
+        request_body = request.get_json()
+        raw_address = request_body.get("address")
+        tenant_name = request_body.get("name")
+        try:
+            address = self._parse_address(raw_address)
+        except ValueError as e:
+            return self._err_json_response(HTTPStatus.BAD_REQUEST, f"Could not normalize address {raw_address}: `{e}`")
+        self._logger.info(f"Normalized address `{raw_address}` to `{address}`")
+
+        if not (result := self._db.new_tenant(address=address, tenant_name=tenant_name)):
+            return self._err_json_response(HTTPStatus.INTERNAL_SERVER_ERROR, f"Could not insert tenant `{tenant_name}` into database")
+        return jsonify(result), HTTPStatus.CREATED
 
     def index(self) -> Response:
         return Response(render_template("index.html"))
@@ -68,7 +77,7 @@ class Application(metaclass=SingletonMeta):
 
     def _route_all(self):
         self._route("/", self.index)
-        self._route("/_address", self._add_address, methods=["POST"])
+        self._route("/_tenant", self._add_entry, methods=["POST"])
 
     def _err_json_response(self, status: int, message: str) -> Response:
         self._logger.debug(f"sending back error response ({status}): {message}")
