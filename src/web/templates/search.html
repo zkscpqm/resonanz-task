@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Resonanz - Search{% endblock %}
+
+{% block content %}
+    <h2 class="mb-4">Search</h2>
+    <form id="searchForm" class="mb-3">
+        <div class="row g-3 align-items-center">
+            <div class="col-auto">
+                <select class="form-select" id="searchType">
+                    <option value="address">Address</option>
+                    <option value="tenant">Tenant</option>
+                </select>
+            </div>
+            <div class="col">
+                <input type="text" class="form-control" id="searchInput" placeholder="Enter query" required />
+            </div>
+            <div class="col-auto">
+                <button type="button" id="searchBtn" class="btn btn-primary">Search</button>
+            </div>
+        </div>
+    </form>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">Tenant</th>
+                <th scope="col">Address</th>
+            </tr>
+        </thead>
+        <tbody id="searchResults"></tbody>
+    </table>
+
+<script>
+    $(document).ready(function() {
+        $('#searchBtn').click(function () {
+            let searchType = $('#searchType').val();
+            let query = $('#searchInput').val();
+            let endpoint = searchType === 'tenant' ? '/search/_addresses' : '/search/_tenants';
+
+            let queryString = '';
+            if (searchType === 'address') {
+                queryString = '?address=' + encodeURIComponent(query);
+            } else {
+                queryString = '?name=' + encodeURIComponent(query);
+            }
+
+            $.ajax({
+                type: "GET",
+                url: endpoint + queryString,
+                success: function(response) {
+                    $('#searchResults').empty();
+                    console.log(searchType, response);
+                    if (searchType === 'address') {
+                        response.forEach(function(item) {
+                            let tenantName = item.name || '';
+                            let address = item.address.address || '';
+                            $('#searchResults').append(`<tr><td>${tenantName}</td><td>${address}</td></tr>`);
+                        });
+                    } else {
+                        response.forEach(function(item) {
+                            $('#searchResults').append(`<tr><td>${query}</td><td>${item.address}</td></tr>`);
+                        });
+                    }
+                },
+                error: function(error) {
+                    newToast('Error: ' + error.responseText, 'red');
+                }
+            });
+        });
+
+        function newToast(message, color) {
+            Toastify({
+                text: message,
+                duration: 3000,
+                close: true,
+                gravity: "top",
+                position: 'right',
+                backgroundColor: color,
+                stopOnFocus: true
+            }).showToast();
+        }
+    });
+</script>
+
+
+{% endblock %}

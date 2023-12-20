@@ -5,12 +5,12 @@
 #### Backend
 
  - [x] Set up Flask
- - [ ] Set up database
+ - [x] Set up database
  - [x] Set up Logging
  - [x] Normalize addresses and choose best backend
    - [x] Get basic functionality with Nominatim
    - [x] Get basic functionality with Google Maps API
- - [ ] Implement address matching
+ - [x] Implement address matching
  - [ ] Implement loading CSVs
 
 #### Frontend

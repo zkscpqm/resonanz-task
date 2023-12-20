@@ -12,7 +12,7 @@ class Logger:
         log_directory.mkdir(parents=True, exist_ok=True)
         self._level: int = level
 
-        self._setup_logger(name)
+        self._setup_logger(name, level)
         self._setup_file_handlers(log_directory, level)
         self._setup_console_handler(level)
 
@@ -27,12 +27,17 @@ class Logger:
         else:
             return Path("/var/log/resonanz/")
 
-    def _setup_logger(self, name: str) -> None:
-        self.logger = logging.getLogger(name)
-        self.logger.setLevel(logging.DEBUG)
-
     def new_from(self, name: str) -> 'Logger':
-        return Logger(name, level=self._level)
+        new_logger = Logger(name, level=self._level)
+        new_logger.logger.handlers = []  # Clear existing handlers
+        new_logger._setup_file_handlers(self._log_dir(), self._level)
+        new_logger._setup_console_handler(self._level)
+        return new_logger
+
+    def _setup_logger(self, name: str, level: int) -> None:
+        self.logger = logging.getLogger(name)
+        if not self.logger.hasHandlers():
+            self.logger.setLevel(level)
 
     def _setup_file_handlers(self, log_directory: Path, level: int) -> None:
         date = datetime.datetime.now().strftime("%Y%m%d")

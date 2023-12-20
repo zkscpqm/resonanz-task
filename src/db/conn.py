@@ -7,7 +7,8 @@ from sqlalchemy.engine.base import Engine
 
 from config import DatabaseConfig
 from src.db.base import Base
-from src.db.model import Address, Tenant
+from src.db.model import AddressModel
+from src.web.model import Address, Tenant
 from src.db.session import Session
 from src.util.logging import Logger
 
@@ -49,7 +50,7 @@ class Database:
 
         # This has to be done here because the relationship must be defined in both models
         # Since one model must always be written above the other, this is the only place where it can be done
-        Address.tenants = relationship('Tenant', order_by=Tenant.id, back_populates='address')
+        AddressModel.tenants = relationship('TenantModel', order_by=Tenant.id, back_populates='address')
 
     @contextlib.contextmanager
     def in_session(self) -> Session:
@@ -57,7 +58,6 @@ class Database:
         sess = Session(raw_session, self._logger.new_from("Session"))
         try:
             yield sess
-            self._logger.debug("Committing...")
             raw_session.commit()
         except Exception as e:
             self._logger.debug(f"Exception in session: {e}, rolling back...")
@@ -66,23 +66,51 @@ class Database:
         finally:
             raw_session.close()
 
-    def new_tenant(self, address: Address, tenant_name: str) -> dict[str, Any]:
+    def new_tenant(self, address: Address, tenant_name: str) -> Tenant | None:
         try:
             with self.in_session() as session:
-
-                if not (
-                        addr_data := session.insert_address(address)
-                ) or not (
-                        addr_id := addr_data.get('id')
-                ):
+                session.insert_address(address)
+                if not address.id:
                     self._logger.error(f"Could not insert address into database\n{address}")
-                    return {}
-                tenant = Tenant(name=tenant_name, address_id=addr_id)
-                if not (tenant_data := session.insert_tenant(tenant)):
+                    return
+
+                tenant = Tenant(name=tenant_name, address=address)
+                session.insert_tenant(tenant)
+                if not tenant.id:
                     self._logger.error(f"Could not insert tenant into database\n{tenant}")
-                    return {}
-                return tenant_data | {"address": addr_data}
+                    return
+                return tenant
 
         except Exception as e:
             self._logger.error(f"Could not insert new entry for tenant {tenant_name}\n{address}\nError: `{e}`")
-            return {}
+            return
+
+    def get_tenants_at_address(self, address: Address) -> list[Tenant]:
+        try:
+            with self.in_session() as session:
+                if not (res := session.get_address(address.full_address)):
+                    self._logger.error(f"Could not find address in database\n{address}")
+                    return []
+                return session.find_tenants_at_address(res.id)
+        except Exception as e:
+            self._logger.error(f"Could not get tenants at address\n{address}\nError: `{e}`")
+            return []
+
+    def get_addresses_for_tenant_name(self, tenant_name: str) -> list[Address]:
+        try:
+            with self.in_session() as session:
+                return session.search_addresses_by_tenant(tenant_name)
+        except Exception as e:
+            self._logger.error(f"Could not get addresses for tenant name {tenant_name}\nError: `{e}`")
+            return []
+
+    def get_address_location(self, address: Address) -> tuple[float, float] | None:
+        try:
+            with self.in_session() as session:
+                if not (res := session.get_address(address.full_address)):
+                    self._logger.error(f"Could not find address in database\n{address}")
+                    return
+                return res.lat, res.lon
+        except Exception as e:
+            self._logger.error(f"Could not get address with ID {address}\nError: `{e}`")
+            return

@@ -1,14 +1,16 @@
 import json
+from datetime import timedelta
 from http import HTTPStatus
-from typing import Callable, Any
+from typing import Callable
 
 from flask import Flask, render_template, request, Response, jsonify
 
 from src.db.conn import Database
-from src.db.model import Address, Tenant
+from src.db.model import AddressModel
 from src.geo.normalization import AddressParser, new_parser
 from src.util.logging import Logger
 from src.util.meta import SingletonMeta
+from src.web.model import Address
 
 
 class Application(metaclass=SingletonMeta):
@@ -28,7 +30,12 @@ class Application(metaclass=SingletonMeta):
             parser_engine, logger=logger.new_from("ADDRESS_PARSER"), api_key=parser_api_key
         )
         self._logger: Logger = logger
+        self._configure()
         self._route_all()
+
+    def _configure(self):
+        # avoid reading the file from disk each time
+        self._app.config['SEND_FILE_MAX_AGE_DEFAULT'] = timedelta(seconds=60 * 60 * 24 * 365)
 
     def run(self, port: int = 0, debug: bool = False):
         if not port:
@@ -43,19 +50,17 @@ class Application(metaclass=SingletonMeta):
         self._logger.info(f"Running in production mode (waitress) on {port=}")
         waitress.serve(self._app, host="0.0.0.0", port=port)
 
-    def _parse_address(self, raw_address: str) -> Address | None:
+    def _parse_address(self, raw_address: str) -> Address:
         if not raw_address:
             raise ValueError("No address specified")
 
         self._logger.debug(f"Got request to normalize address: `{raw_address}`")
         if not (address := self._address_parser.normalize(raw_address)):
             raise ValueError(f"Could not normalize address: `{address}`")
+        self._logger.debug(f"Normalized address `{raw_address}` to `{address}`")
         return address
 
     def _add_entry(self):
-        if request.method.upper() != "POST":
-            self._logger.error(f"Got request with method {request.method} instead of POST")
-            return self._err_json_response(HTTPStatus.METHOD_NOT_ALLOWED, "FATAL: Only POST is allowed")
         request_body = request.get_json()
         raw_address = request_body.get("address")
         tenant_name = request_body.get("name")
@@ -63,21 +68,51 @@ class Application(metaclass=SingletonMeta):
             address = self._parse_address(raw_address)
         except ValueError as e:
             return self._err_json_response(HTTPStatus.BAD_REQUEST, f"Could not normalize address {raw_address}: `{e}`")
-        self._logger.info(f"Normalized address `{raw_address}` to `{address}`")
-
         if not (result := self._db.new_tenant(address=address, tenant_name=tenant_name)):
             return self._err_json_response(HTTPStatus.INTERNAL_SERVER_ERROR, f"Could not insert tenant `{tenant_name}` into database")
         return jsonify(result), HTTPStatus.CREATED
 
-    def index(self) -> Response:
-        return Response(render_template("index.html"))
+    def _search_tenants_by_address(self) -> Response:
+        raw_address = request.args.get("address")
+        try:
+            address = self._parse_address(raw_address)
+        except ValueError as e:
+            return self._err_json_response(HTTPStatus.BAD_REQUEST, f"Could not normalize address {raw_address}: `{e}`")
 
-    def _route(self, path: str, view_function: Callable, methods: list[str] = None):
-        self._app.add_url_rule(path, path.lstrip("/"), view_function, methods=methods or ["GET"])
+        if not (result := self._db.get_tenants_at_address(address=address)):
+            return self._err_json_response(HTTPStatus.INTERNAL_SERVER_ERROR,
+                                           f"Could not get tenants at address `{address}` from database")
+        return jsonify([tenant.to_dict() for tenant in result])
+
+    def _search_addresses_by_tenant(self) -> Response:
+        tenant_name = request.args.get("name")
+        if not (result := self._db.get_addresses_for_tenant_name(tenant_name=tenant_name)):
+            return self._err_json_response(HTTPStatus.INTERNAL_SERVER_ERROR,
+                                           f"Could not get addresses for tenants named `{tenant_name}` from database")
+        return jsonify([address.to_dict() for address in result])
+
+    def search(self) -> Response:
+        return Response(render_template("search.html"))
+
+    def insert(self) -> Response:
+        return Response(render_template("insert.html"))
+
+    def _route(self, path: str, view_function: Callable, methods: list[str] = None, endpoint: str = None):
+        self._app.add_url_rule(
+            path,
+            view_func=view_function, methods=methods or ["GET"], endpoint=endpoint
+        )
 
     def _route_all(self):
-        self._route("/", self.index)
-        self._route("/_tenant", self._add_entry, methods=["POST"])
+        self._route("/", self.search)
+        self._route("/search", self.search, endpoint="search")
+        self._route("/insert", self.insert, endpoint="insert")
+
+        # these are named a bit weird because basically you search addresses to find tenants and vice-versa
+        self._route("/search/_addresses", self._search_addresses_by_tenant)
+        self._route("/search/_tenants", self._search_tenants_by_address)
+
+        self._route("/insert/_tenant", self._add_entry, methods=["POST"])
 
     def _err_json_response(self, status: int, message: str) -> Response:
         self._logger.debug(f"sending back error response ({status}): {message}")

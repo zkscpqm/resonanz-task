@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Insert - Resonanz{% endblock %}
+
+{% block content %}
+    <h2 class="mb-4">Enter Tenant Information</h2>
+    <form id="insertForm" class="mb-3">
+        <div class="mb-3">
+            <label for="tenantName" class="form-label">Tenant Name</label>
+            <input type="text" class="form-control" id="tenantName" placeholder="Enter tenant name" required />
+        </div>
+        <div class="mb-3">
+            <label for="tenantAddress" class="form-label">Tenant Address</label>
+            <input type="text" class="form-control" id="tenantAddress" placeholder="Enter tenant address" required />
+        </div>
+        <button type="button" id="insertBtn" class="btn btn-primary">Submit</button>
+    </form>
+
+    <script>
+        $(document).ready(function() {
+            $('#insertBtn').click(function() {
+                const tenantName = $('#tenantName').val();
+                const tenantAddress = $('#tenantAddress').val();
+
+                $.ajax({
+                    url: '/insert/_tenant',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ name: tenantName, address: tenantAddress }),
+                    success: function(response) {
+                        newToast("Tenant information added.", "#5cb85c");
+                        $('#tenantName').val('');
+                        $('#tenantAddress').val('');
+                    },
+                    error: function(xhr, status, error) {
+                        newToast("Error - " + xhr.status + ': ' + xhr.statusText, "#dc3545");
+                    }
+                });
+            });
+        });
+
+        function newToast(message, color) {
+            Toastify({
+                text: message,
+                duration: 3000,
+                close: true,
+                gravity: "top",
+                position: 'right',
+                backgroundColor: color,
+                stopOnFocus: true
+            }).showToast();
+        }
+    </script>
+{% endblock %}

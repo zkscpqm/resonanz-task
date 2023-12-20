@@ -5,8 +5,8 @@ from googlemaps import Client as GoogleMapsClient
 from googlemaps.geocoding import geocode as googlemaps_geocode
 from geopy import Nominatim
 
-from src.db.model import Address
 from src.util.logging import Logger
+from src.web.model import Address
 
 
 class AddressParser(metaclass=abc.ABCMeta):
@@ -43,7 +43,7 @@ class _AddressParserNominatim(AddressParser):
         self._last_request = datetime.now()
         if not location:
             return
-        return location.address
+        return Address(full_address=location.address)
 
 
 class _AddressParserGoogleMaps(AddressParser):
