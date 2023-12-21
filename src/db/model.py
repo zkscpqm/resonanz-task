@@ -18,6 +18,7 @@ class TenantModel(Base):
 
     id: int = Column(Integer, primary_key=True)
     name: str = Column(String, nullable=False)
+    name_lower: str = Column(String, nullable=False)
     address_id: int = Column(Integer, ForeignKey('addresses.id'), nullable=False)
     address = relationship('AddressModel', back_populates='tenants')
 

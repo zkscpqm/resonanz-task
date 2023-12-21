@@ -53,7 +53,7 @@ class Logger:
 
     @classmethod
     def _create_file_handler(cls, file_path: Path, level: int) -> logging.FileHandler:
-        file_handler = logging.FileHandler(file_path)
+        file_handler = logging.FileHandler(file_path, encoding='utf-8')
         file_handler.setLevel(level)
         file_handler.setFormatter(logging.Formatter(cls._format_string()))
         return file_handler

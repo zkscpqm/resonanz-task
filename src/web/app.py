@@ -1,6 +1,8 @@
+import csv
 import json
 from datetime import timedelta
 from http import HTTPStatus
+from io import TextIOWrapper
 from typing import Callable
 
 from flask import Flask, render_template, request, Response, jsonify
@@ -14,6 +16,8 @@ from src.web.model import Address
 
 
 class Application(metaclass=SingletonMeta):
+
+    _batch_size: int = 1024
 
     def __init__(self, logger: Logger, db: Database, port: int = 0,
                  parser_engine: str = AddressParser.GOOGLE_MAPS, parser_api_key: str = None
@@ -30,12 +34,13 @@ class Application(metaclass=SingletonMeta):
             parser_engine, logger=logger.new_from("ADDRESS_PARSER"), api_key=parser_api_key
         )
         self._logger: Logger = logger
-        self._configure()
+        self._configure(parser_api_key)
         self._route_all()
 
-    def _configure(self):
+    def _configure(self, maps_api_key: str):
         # avoid reading the file from disk each time
         self._app.config['SEND_FILE_MAX_AGE_DEFAULT'] = timedelta(seconds=60 * 60 * 24 * 365)
+        self._app.config['GOOGLE_MAPS_API_KEY'] = maps_api_key
 
     def run(self, port: int = 0, debug: bool = False):
         if not port:
@@ -71,6 +76,50 @@ class Application(metaclass=SingletonMeta):
         if not (result := self._db.new_tenant(address=address, tenant_name=tenant_name)):
             return self._err_json_response(HTTPStatus.INTERNAL_SERVER_ERROR, f"Could not insert tenant `{tenant_name}` into database")
         return jsonify(result), HTTPStatus.CREATED
+
+    def _batch_insert(self):
+        if 'file' not in request.files:
+            return self._err_json_response(HTTPStatus.BAD_REQUEST, "No file part")
+
+        file = request.files['file']
+        if file.filename == '':
+            return self._err_json_response(HTTPStatus.BAD_REQUEST, "No selected file")
+
+        batch = []
+        success_count = 0
+        failure_count = 0
+
+        # Process the file line by line
+        text_stream = TextIOWrapper(file.stream, encoding='utf-8')
+        csv_reader = csv.reader(text_stream)
+        for i, row in enumerate(csv_reader):
+            if len(row) != 2:
+                failure_count += 1
+                self._logger.warning(f"Skipping row {i} because it does not have exactly 2 columns")
+                continue
+
+            tenant_name, raw_address = row
+            try:
+                address = self._parse_address(raw_address)
+                batch.append((tenant_name, address))
+            except ValueError:
+                self._logger.warning(f"Skipping row {i} because could not normalize address `{raw_address}`")
+                failure_count += 1
+
+            if len(batch) >= self._batch_size:
+                pending = len(batch)
+                successful = self._db.batch_insert_tenants(batch)
+                success_count += successful
+                failure_count += pending - successful
+                batch.clear()
+
+        if batch:
+            pending = len(batch)
+            successful = self._db.batch_insert_tenants(batch)
+            success_count += successful
+            failure_count += pending - successful
+        text_stream.close()
+        return jsonify({"success": success_count, "failed": failure_count}), HTTPStatus.OK
 
     def _search_tenants_by_address(self) -> Response:
         raw_address = request.args.get("address")
@@ -113,6 +162,7 @@ class Application(metaclass=SingletonMeta):
         self._route("/search/_tenants", self._search_tenants_by_address)
 
         self._route("/insert/_tenant", self._add_entry, methods=["POST"])
+        self._route("/insert/_batch", self._batch_insert, methods=["POST"])
 
     def _err_json_response(self, status: int, message: str) -> Response:
         self._logger.debug(f"sending back error response ({status}): {message}")

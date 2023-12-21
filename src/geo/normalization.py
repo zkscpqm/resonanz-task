@@ -62,7 +62,7 @@ class _AddressParserGoogleMaps(AddressParser):
             while (datetime.now() - self._last_request).total_seconds() < 0.2:
                 pass
         try:
-            geocode_result = googlemaps_geocode(self._client, address, language="en-gb")
+            geocode_result = googlemaps_geocode(self._client, address, language="en-us")
             self._last_request = datetime.now()
             if not geocode_result:
                 return

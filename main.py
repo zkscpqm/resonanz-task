@@ -20,6 +20,7 @@ def test(db: Database, logger: Logger, key: str):
         "15 Dr Louis Mallet Saint-Chély-d'Apcher": ("Christine Deveraux", "Cosette Fauchelevent"),
         "3 wall street nyc": ("Donald Trump",),
         "5 wall street nyc": ("Donald Trump",),
+        "1 Guanghua Road, Beijing, China 100020": ("Xi Jinping",),
     }
 
     for addr, tenants in data.items():
@@ -47,9 +48,9 @@ def main():
 
     test(db, logger, cfg.address_parser_api_key)
 
-    app = Application(port=cfg.port, logger=logger.new_from("APP"), db=db,
-                      parser_engine=cfg.address_parser_backend, parser_api_key=cfg.address_parser_api_key)
-    app.run(debug=cfg.debug_mode)
+    # app = Application(port=cfg.port, logger=logger.new_from("APP"), db=db,
+    #                   parser_engine=cfg.address_parser_backend, parser_api_key=cfg.address_parser_api_key)
+    # app.run(debug=cfg.debug_mode)
 
 
 if __name__ == '__main__':

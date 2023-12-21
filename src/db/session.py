@@ -49,6 +49,21 @@ class Session:
             self._logger.error(f"Could not insert tenant\n{tenant}\nError: `{e}`")
             return
 
+    def delete_tenant(self, tenant_id):
+        self._logger.debug(f"Inserting tenant\n{tenant}")
+        try:
+            if existing := self.get_tenant(tenant.name, tenant.address.id):
+                self._logger.debug(f"Tenant already exists with ID: {existing.id}")
+                tenant.id = existing.id
+                return
+            tenant_model = tenant.to_tenant_model()
+            self._insert(tenant_model)
+            tenant.id = tenant_model.id
+
+        except Exception as e:
+            self._logger.error(f"Could not insert tenant\n{tenant}\nError: `{e}`")
+            return
+
     def _insert(self, what: Base) -> int:
         self._session.add(what)
         self._session.flush()
@@ -60,12 +75,12 @@ class Session:
             return Address.from_address_model(res)
 
     def get_tenant(self, tenant_name: str, address_id: int) -> Tenant | None:
-        if res := self._session.query(TenantModel).filter_by(name=tenant_name, address_id=address_id).first():
+        if res := self._session.query(TenantModel).filter_by(name_lower=tenant_name.lower(), address_id=address_id).first():
             return Tenant.from_tenant_model(res)
 
     def search_addresses_by_tenant(self, tenant_name: str) -> list[Address]:
         return [Address.from_address_model(tm.address) for tm in
-                self._session.query(TenantModel).filter_by(name=tenant_name).all()]
+                self._session.query(TenantModel).filter_by(name_lower=tenant_name.lower()).all()]
 
     def find_tenants_at_address(self, address_id: int) -> list[Tenant]:
         return [Tenant.from_tenant_model(tm) for tm in

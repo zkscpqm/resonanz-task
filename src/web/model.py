@@ -77,5 +77,6 @@ class Tenant:
     def to_tenant_model(self) -> TenantModel:
         return TenantModel(
             name=self.name,
+            name_lower=self.name.lower(),
             address_id=self.address.id if self.address else None,
         )

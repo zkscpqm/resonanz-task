@@ -85,6 +85,28 @@ class Database:
             self._logger.error(f"Could not insert new entry for tenant {tenant_name}\n{address}\nError: `{e}`")
             return
 
+    def batch_insert_tenants(self, batch: list[tuple[str, Address]]) -> int:
+        success_count = 0
+
+        with self.in_session() as session:
+            for tenant_name, address in batch:
+                try:
+                    session.insert_address(address)
+                    if not address.id:
+                        self._logger.error(f"Could not insert address into database\n{address}")
+                        continue
+
+                    tenant = Tenant(name=tenant_name, address=address)
+                    session.insert_tenant(tenant)
+                    if tenant.id:
+                        success_count += 1
+                except Exception as e:
+                    self._logger.error(
+                        f"Error during batch insert\nTenant: {tenant_name}, Address: {address}\nError: `{e}`")
+                    continue
+
+        return success_count
+
     def get_tenants_at_address(self, address: Address) -> list[Tenant]:
         try:
             with self.in_session() as session:
