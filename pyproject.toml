@@ -4,7 +4,6 @@ version = "0.1.0"
 description = ""
 authors = ["Georgi <zkscpqm@daum.net>"]
 readme = "README.md"
-packages = [{include = "resonanz_task"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -14,7 +13,7 @@ geopy = "^2.4.1"
 googlemaps = "^4.10.0"
 termcolor = "^2.4.0"
 sqlalchemy = "^2.0.23"
-psycopg2 = "^2.9.9"
+psycopg2-binary = "^2.9.9"
 
 
 [build-system]

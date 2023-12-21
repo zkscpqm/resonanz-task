@@ -1,6 +1,7 @@
 import dataclasses
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -39,12 +40,12 @@ class DatabaseConfig:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> 'DatabaseConfig':
         return cls(
-            db_type=data.get("type"),
-            username=data.get("username"),
-            password=data.get("password"),
-            host=data.get("host"),
-            port=data.get("port"),
-            db_name=data.get("name"),
+            db_type=data.get("type", os.getenv("DATABASE_ENGINE", "sqlite")),
+            username=data.get("username", os.getenv("DATABASE_USER", "NOT_SET")),
+            password=data.get("password", os.getenv("DATABASE_PASSWORD", "NOT_SET")),
+            host=data.get("host", os.getenv("DATABASE_HOST", "localhost")),
+            port=data.get("port", os.getenv("DATABASE_PORT", -1)),
+            db_name=data.get("name", "resonanz"),
         )
 
 

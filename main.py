@@ -46,11 +46,11 @@ def main():
 
     db = Database(cfg.database, logger=logger.new_from("DB"))
 
-    test(db, logger, cfg.address_parser_api_key)
+    # test(db, logger, cfg.address_parser_api_key)
 
-    # app = Application(port=cfg.port, logger=logger.new_from("APP"), db=db,
-    #                   parser_engine=cfg.address_parser_backend, parser_api_key=cfg.address_parser_api_key)
-    # app.run(debug=cfg.debug_mode)
+    app = Application(port=cfg.port, logger=logger.new_from("APP"), db=db,
+                      parser_engine=cfg.address_parser_backend, parser_api_key=cfg.address_parser_api_key)
+    app.run(debug=cfg.debug_mode)
 
 
 if __name__ == '__main__':

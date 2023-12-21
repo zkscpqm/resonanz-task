@@ -2,3 +2,5 @@
 .idea/
 config.json
 *.db
+docker_config.json
+deploy/logs/

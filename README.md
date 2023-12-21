@@ -11,8 +11,8 @@
    - [x] Get basic functionality with Nominatim
    - [x] Get basic functionality with Google Maps API
  - [x] Implement address matching
- - [ ] Implement loading CSVs
- - [ ] Normalize names? (use as lower for easy matching and have Capitalized for return)
+ - [x] Implement loading CSVs
+ - [x] Normalize names? (use as lower for easy matching and have Capitalized for return)
 
 #### Frontend
 
@@ -29,4 +29,4 @@
 
  - [x] Bare metal default (debug)
  - [x] Bare metal with WSGI
- - [ ] Docker
+ - [x] Docker
