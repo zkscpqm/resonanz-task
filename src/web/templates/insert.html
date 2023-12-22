@@ -23,74 +23,9 @@
     <div id="progressBar" style="display:none; width: 100%; background-color: grey;">
         <div id="progressBarStatus" style="height: 30px; width: 0%; background-color: green;"></div>
     </div>
+{% endblock %}
 
-    <script>
-        $(document).ready(function() {
-            $('#insertBtn').click(function() {
-                const tenantName = $('#tenantName').val();
-                const tenantAddress = $('#tenantAddress').val();
-
-                if (tenantName && tenantAddress) {
-                    $.ajax({
-                        url: '/insert/_tenant',
-                        type: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify({ name: tenantName, address: tenantAddress }),
-                        success: function(response) {
-                            newToast("Tenant information added.", "#5cb85c");
-                        },
-                        error: function(xhr) {
-                            newToast("Error - " + xhr.status + ': ' + xhr.statusText, "#dc3545");
-                        }
-                    });
-                    $('#tenantName').val('');
-                    $('#tenantAddress').val('');
-                }
-
-                const file = $('#csvFile')[0].files[0];
-                if (file) {
-                    uploadFile(file);
-                }
-            });
-        });
-
-        function uploadFile(file) {
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', '/insert/_batch', true);
-
-            xhr.upload.onprogress = function(e) {
-                if (e.lengthComputable) {
-                    const percentComplete = (e.loaded / e.total) * 100;
-                    $('#progressBar').show();
-                    $('#progressBarStatus').css('width', percentComplete + '%');
-                }
-            };
-
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    newToast("File uploaded successfully.", "#5cb85c");
-                } else {
-                    newToast("Error - File upload failed.", "#dc3545");
-                }
-                $('#progressBar').hide();
-                $('#progressBarStatus').css('width', '0%');
-            };
-
-            const formData = new FormData();
-            formData.append('file', file);
-            xhr.send(formData);
-        }
-
-        function newToast(message, color) {
-            Toastify({
-                text: message,
-                duration: 3000,
-                close: true,
-                gravity: "top",
-                position: 'right',
-                backgroundColor: color,
-                stopOnFocus: true
-            }).showToast();
-        }
-    </script>
+{% block scripts %}
+    <script type="module" src="{{ url_for('static', filename='js/alert.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/insert.js') }}"></script>
 {% endblock %}

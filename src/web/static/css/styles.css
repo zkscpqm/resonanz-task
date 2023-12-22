@@ -1,0 +1,28 @@
+body, html {
+    margin: 0;
+    padding: 0;
+}
+.navbar-custom {
+    background-color: #343a40;
+    padding-top: 0.5rem;
+    padding-bottom: 0;
+}
+.navbar-custom .navbar-nav .nav-link {
+    color: white;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+.navbar-custom .navbar-nav .nav-link:hover,
+.navbar-custom .navbar-nav .nav-link:focus {
+    background-color: #495057;
+}
+.navbar-custom .navbar-nav .active {
+    color: white;
+    border-bottom: 3px solid #fcb43d;
+    padding-top: 0.5rem;
+    padding-bottom: 10px;
+}
+.container {
+    max-width: 600px;
+    padding-top: 2rem;
+}

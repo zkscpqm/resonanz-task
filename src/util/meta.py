@@ -1,4 +1,7 @@
 class SingletonMeta(type):
+    """
+    Metaclass for creating singletons. Only used for the web app as a precaution.
+    """
 
     _instances: dict[str, object] = {}
 

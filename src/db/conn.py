@@ -67,25 +67,34 @@ class Database:
             raw_session.close()
 
     def new_tenant(self, address: Address, tenant_name: str) -> Tenant | None:
+        """
+        Insert a new tenant into the database. First, insert the address and upon success, insert the tenant
+        """
         try:
             with self.in_session() as session:
                 session.insert_address(address)
                 if not address.id:
                     self._logger.error(f"Could not insert address into database\n{address}")
-                    return
+                    raise
 
                 tenant = Tenant(name=tenant_name, address=address)
                 session.insert_tenant(tenant)
                 if not tenant.id:
                     self._logger.error(f"Could not insert tenant into database\n{tenant}")
-                    return
+                    raise
                 return tenant
 
         except Exception as e:
             self._logger.error(f"Could not insert new entry for tenant {tenant_name}\n{address}\nError: `{e}`")
-            return
+            raise
 
     def batch_insert_tenants(self, batch: list[tuple[str, Address]]) -> int:
+        """
+        Insert a batch of tenants into the database. See `session.insert_tenant`
+        This does them one by one so that we can verify IDs are set correctly
+        :param batch: a list of pairs of tenant names and addresses to insert
+        :return: the number of successfully inserted tenants
+        """
         success_count = 0
 
         with self.in_session() as session:
@@ -107,7 +116,18 @@ class Database:
 
         return success_count
 
+    def get_all_tenants(self) -> list[Tenant]:
+        try:
+            with self.in_session() as session:
+                return session.get_all_tenants()
+        except Exception as e:
+            self._logger.error(f"Could not get all tenants\nError: `{e}`")
+            return []
+
     def get_tenants_at_address(self, address: Address) -> list[Tenant]:
+        """
+        Get all tenants at an address. See `session.find_tenants_at_address`
+        """
         try:
             with self.in_session() as session:
                 if not (res := session.get_address(address.full_address)):
@@ -118,7 +138,10 @@ class Database:
             self._logger.error(f"Could not get tenants at address\n{address}\nError: `{e}`")
             return []
 
-    def get_addresses_for_tenant_name(self, tenant_name: str) -> list[Address]:
+    def get_addresses_for_tenant_name(self, tenant_name: str) -> list[Tenant]:
+        """
+        See `session.search_addresses_by_tenant`
+        """
         try:
             with self.in_session() as session:
                 return session.search_addresses_by_tenant(tenant_name)
@@ -127,6 +150,7 @@ class Database:
             return []
 
     def get_address_location(self, address: Address) -> tuple[float, float] | None:
+        # Not used, was going to have a Google Maps integration on the Frontend, but it would have taken too long
         try:
             with self.in_session() as session:
                 if not (res := session.get_address(address.full_address)):

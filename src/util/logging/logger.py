@@ -7,6 +7,9 @@ from typing import Any
 
 
 class Logger:
+    """
+    Wrapper around the standard logging module with the boilerplate abstracted away.
+    """
     def __init__(self, name: str, level: int = logging.INFO) -> None:
         log_directory = self._log_dir()
         log_directory.mkdir(parents=True, exist_ok=True)
@@ -16,9 +19,6 @@ class Logger:
         self._setup_file_handlers(log_directory, level)
         self._setup_console_handler(level)
 
-    @classmethod
-    def default(cls) -> 'Logger':
-        return cls("resonanz")
 
     @staticmethod
     def _log_dir() -> Path:
@@ -28,6 +28,10 @@ class Logger:
             return Path("/var/log/resonanz/")
 
     def new_from(self, name: str) -> 'Logger':
+        """
+        Create a new logger with the same configuration as this one, but with a different name. Useful for creating
+        child loggers for downstream components.
+        """
         new_logger = Logger(name, level=self._level)
         new_logger.logger.handlers = []  # Clear existing handlers
         new_logger._setup_file_handlers(self._log_dir(), self._level)

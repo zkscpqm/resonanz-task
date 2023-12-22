@@ -23,7 +23,7 @@ services:
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
       - DATABASE_ENGINE=postgres
       - DATABASE_HOST=postgres
-      - DATABASE_PORT=5432
+      - DATABASE_PORT=${DATABASE_PORT}
       - DATABASE_NAME=${DATABASE_NAME}
       - DATABASE_USER=postgres
 

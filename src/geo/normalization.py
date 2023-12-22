@@ -11,6 +11,12 @@ from src.web.model import Address
 
 class AddressParser(metaclass=abc.ABCMeta):
 
+    """
+    Abstract class for address normalization. This is used to parse addresses from the user so that they can be compared
+    fairly (eg if they are written slightly differently). This is done by using a third-party API to normalize the
+    addresses. The API used can be either Nominatim or Google Maps. If Google Maps is used, an API key must be provided
+    """
+
     NOMINATIM: str = "nominatim"
     GOOGLE_MAPS: str = "googlemaps"
 
@@ -23,12 +29,6 @@ class AddressParser(metaclass=abc.ABCMeta):
 
 
 class _AddressParserNominatim(AddressParser):
-    """
-    This class is responsible for normalizing addresses.
-
-    The current backend is Nominatim which has a rate limit of 1 request per second,
-    thus requiring this class instead of a more trivial solution.
-    """
 
     def __init__(self, logger: Logger):
         AddressParser.__init__(self, logger)
@@ -47,9 +47,6 @@ class _AddressParserNominatim(AddressParser):
 
 
 class _AddressParserGoogleMaps(AddressParser):
-    """
-    This class is responsible for normalizing addresses using Google Maps Geocoding API.
-    """
 
     def __init__(self, api_key: str, logger: Logger = None):
         AddressParser.__init__(self, logger)
@@ -74,6 +71,10 @@ class _AddressParserGoogleMaps(AddressParser):
 
 
 def new_parser(engine: str, *, logger: Logger, **kwargs) -> AddressParser:
+    """
+    Factory method for creating a new AddressParser
+    :param engine: which backend to use for normalizing GeoLocations
+    """
     if engine == AddressParser.NOMINATIM:
         return _AddressParserNominatim(logger=logger.new_from("PARSER_NOMINATIM"))
     if engine == AddressParser.GOOGLE_MAPS:

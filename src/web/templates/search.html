@@ -21,6 +21,8 @@
         </div>
     </form>
 
+    <button type="button" id="downloadBtn" class="btn btn-secondary" disabled>Download Results</button>
+
     <table class="table">
         <thead>
             <tr>
@@ -30,58 +32,9 @@
         </thead>
         <tbody id="searchResults"></tbody>
     </table>
+{% endblock %}
 
-<script>
-    $(document).ready(function() {
-        $('#searchBtn').click(function () {
-            let searchType = $('#searchType').val();
-            let query = $('#searchInput').val();
-            let endpoint = searchType === 'tenant' ? '/search/_addresses' : '/search/_tenants';
-
-            let queryString = '';
-            if (searchType === 'address') {
-                queryString = '?address=' + encodeURIComponent(query);
-            } else {
-                queryString = '?name=' + encodeURIComponent(query);
-            }
-
-            $.ajax({
-                type: "GET",
-                url: endpoint + queryString,
-                success: function(response) {
-                    $('#searchResults').empty();
-                    console.log(searchType, response);
-                    if (searchType === 'address') {
-                        response.forEach(function(item) {
-                            let tenantName = item.name || '';
-                            let address = item.address.address || '';
-                            $('#searchResults').append(`<tr><td>${tenantName}</td><td>${address}</td></tr>`);
-                        });
-                    } else {
-                        response.forEach(function(item) {
-                            $('#searchResults').append(`<tr><td>${query}</td><td>${item.address}</td></tr>`);
-                        });
-                    }
-                },
-                error: function(error) {
-                    newToast('Error: ' + error.responseText, 'red');
-                }
-            });
-        });
-
-        function newToast(message, color) {
-            Toastify({
-                text: message,
-                duration: 3000,
-                close: true,
-                gravity: "top",
-                position: 'right',
-                backgroundColor: color,
-                stopOnFocus: true
-            }).showToast();
-        }
-    });
-</script>
-
-
+{% block scripts %}
+    <script type="module" src="{{ url_for('static', filename='js/alert.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/search.js') }}"></script>
 {% endblock %}
